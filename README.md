@@ -15,9 +15,8 @@ were used as donors.
 Install
 -------
  0. Place stats requestHandler in solrconfig.xml for all cores, since stats.jsp is not working since 4.x
-   <requestHandler
-     name="/admin/stats"
-     class="org.apache.solr.handler.admin.SolrInfoMBeanHandler" />
+
+   <requestHandler name="/admin/stats" class="org.apache.solr.handler.admin.SolrInfoMBeanHandler" />
 
  1. Place collectd-solr.py in /usr/lib/collectd/plugins/python
  2. Configure the plugin (see below).
