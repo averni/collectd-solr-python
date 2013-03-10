@@ -16,6 +16,7 @@ SOLR_PORT = 8983
 SOLR_URL = '/solr'
 
 def get_cores():
+    return ['core']
     url = 'http://%s:%s/%s/admin/cores?action=status' % (SOLR_HOST, SOLR_PORT, SOLR_URL)
     f = urllib2.urlopen(url)
     xml = etree.fromstring(f.read())
@@ -24,11 +25,13 @@ def get_cores():
 
 for core in get_cores():
     url = 'http://%s:%s/%s/%s/admin/mbeans?stats=true' % (SOLR_HOST, SOLR_PORT, SOLR_URL, core)
-    f = urllib2.urlopen(url)
+    #f = urllib2.urlopen(url)
+    f = open('stats.xml', 'r')
     root = etree.fromstring(f.read())
 
     # numDocs
-    core = root.xpath('/solr/solr-mbeans/CORE')
+    core = root.findall('./response/lst/')
+    print core, dir(core)
     for entry in core[0].xpath('entry'):
         if entry[0].text.strip() == 'searcher':
             stats = entry.xpath('stats')
@@ -47,7 +50,7 @@ for core in get_cores():
                  stats = entry.xpath('stats')
                  for stat in stats[0]:
                      if stat.get('name') in ['lookups', 'hits', 'inserts', 'evictions', 'size']:
-                     stat_list.append(stat.get('name') + '.value ' + stat.text.strip())
+                        stat_list.append(stat.get('name') + '.value ' + stat.text.strip())
                  for i in stat_list:
                      print i
 

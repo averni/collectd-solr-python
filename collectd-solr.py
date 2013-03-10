@@ -49,27 +49,41 @@ except ImportError:
 
 # Host to connect to. Override in config by specifying 'Host'.
 SOLR_HOST = 'localhost'
-
 # Port to connect on. Override in config by specifying 'Port'.
 SOLR_PORT = 8080
-
 # Solr URL. Override in config by specifying 'SolrURL'.
 SOLR_URL = '/solr'
-
 # Solr Admin URL. Override in config by specifying 'SolrAdminURL'.
-SOLR_ADMIN_URL = 'admin/stats?stats=true'
+SOLR_ADMIN_URL = 'admin/mbeans?stats=true'
+
+
+def log_verbose(msg):
+    if not VERBOSE_LOGGING:
+        return
+    collectd.info('activemq_info plugin [verbose]: %s' % msg)
 
 
 def get_cores():
-    url = '%s?action=status' % SOLR_ADMIN_URL
+    url = 'http://%s:%s/%s?action=status' % (SOLR_HOST, SOLR_PORT, SOLR_URL)
     f = urllib2.urlopen(url)
     xml = etree.fromstring(f.read())
     cores = [lst.attrib['name'].strip() for lst in xml.findall('./lst/lst')]
     return cores
 
-def fetch_info():
-    """Connect to Solr stat page and request info"""
-    return
+
+def fetch_info(core):
+    """Connect to Solr stat page and and return XML object"""
+    url = 'http://%s:%s/%s/%s/%s' % (SOLR_HOST, SOLR_PORT, SOLR_URL, core, SOLR_ADMIN_URL)
+    xml = None
+    try:
+        f = urllib2.urlopen(url)
+        #f = open('queues.xml', 'r')
+        xml = etree.fromstring(f.read())
+    except HTTPError as e:
+        log_verbose('collectd-solr plugin: can\'t get info, HTTP error: ' + e.code)
+    except URLError as e:
+        log_verbose('collectd-solr plugin: can\'t get info: ' + e.reason)
+    return xml
 
 
 def configure_callback(conf):
@@ -80,46 +94,37 @@ def configure_callback(conf):
             SOLR_HOST = node.values[0]
         elif node.key == 'Port':
             SOLR_PORT = int(node.values[0])
-        if node.key == 'Host':
+        if node.key == 'URL':
             SOLR_URL = node.values[0]
-        if node.key == 'Host':
+        if node.key == 'AdminURL':
             SOLR_ADMIN_URL = node.values[0]
         else:
             collectd.warning('collectd-solr plugin: Unknown config key: %s.' % node.key)
     log_verbose('Configured: host=%s, port=%s, url=%s, admin_url=%s' % (SOLR_HOST, SOLR_PORT, SOLR_URL, SOLR_ADMIN_URL))
 
 
-def dispatch_value(info, key, type, type_instance=None):
-    """Read a key from info response data and dispatch a value"""
-    if key not in info:
-        collectd.warning('collectd-solr plugin: Info key not found: %s' % key)
-        return
-
-    if not type_instance:
-        type_instance = key
-
-    value = int(info[key])
-    log_verbose('Sending value: %s=%s' % (type_instance, value))
-
-    val = collectd.Values(plugin='collectd-solr')
-    val.type = type
-    val.type_instance = type_instance
+def dispatch_value(instance, key, value, value_type):
+    """Dispatch a value to collectd"""
+    log_verbose('Sending value: %s.%s=%s' % (instance, key, value))
+    val = collectd.Values(plugin='activemq_info')
+    val.plugin_instance = instance
+    val.type = value_type
     val.values = [value]
     val.dispatch()
 
 
 def read_callback():
-    log_verbose('Read callback called')
-    info = fetch_info()
-
-    if not info:
-        collectd.error('solr plugin: No info received')
-        return
-
-    # send high-level values
-    dispatch_value(info, 'test1', 'gauge')
-    dispatch_value(info, 'test2', 'bytes')
-    dispatch_value(info, 'test3', 'counter', 'values')
+    log_verbose('solr-info plugin: Read callback called')
+    cores = get_cores()
+    log_verbose('solr-info plugin: Cores: ' + cores)
+    for core in cores:
+        info = fetch_info(core)
+        if not info:
+            collectd.error('solr-info plugin: No info received')
+        # parse info
+        dispatch_value(core, 'test1', 0, 'gauge')
+        dispatch_value(core, 'test2', 0, 'bytes')
+        dispatch_value(core, 'test3', 0, 'counter')
 
 # register callbacks
 collectd.register_config(configure_callback)
