@@ -1,4 +1,4 @@
-# collectd-solr.py
+#collectd-solr.py
 #
 # This program is free software; you can solrtribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
@@ -37,7 +37,7 @@
 #
 
 import collectd
-import os, sys, urllib2
+import sys, urllib2
 try:
     import xml.etree.cElementTree as etree
 except ImportError:
@@ -56,11 +56,12 @@ SOLR_URL = '/solr'
 # Solr Admin URL. Override in config by specifying 'SolrAdminURL'.
 SOLR_ADMIN_URL = 'admin/mbeans?stats=true'
 
+VERBOSE_LOGGING = True
 
 def log_verbose(msg):
     if not VERBOSE_LOGGING:
         return
-    collectd.info('activemq_info plugin [verbose]: %s' % msg)
+    collectd.info('solr_info plugin [verbose]: %s' % msg)
 
 
 def get_cores():
@@ -79,9 +80,9 @@ def fetch_info(core):
         f = urllib2.urlopen(url)
         #f = open('queues.xml', 'r')
         xml = etree.fromstring(f.read())
-    except HTTPError as e:
+    except urllib2.HTTPError as e:
         log_verbose('collectd-solr plugin: can\'t get info, HTTP error: ' + e.code)
-    except URLError as e:
+    except urllib2.URLError as e:
         log_verbose('collectd-solr plugin: can\'t get info: ' + e.reason)
     return xml
 
