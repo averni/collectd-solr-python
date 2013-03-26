@@ -66,9 +66,15 @@ def log_verbose(msg):
 
 def get_cores():
     url = 'http://%s:%s/%s?action=status' % (SOLR_HOST, SOLR_PORT, SOLR_URL)
-    f = urllib2.urlopen(url)
-    xml = etree.fromstring(f.read())
-    cores = [lst.attrib['name'].strip() for lst in xml.findall('./lst/lst')]
+    try:
+        f = urllib2.urlopen(url)
+        xml = etree.fromstring(f.read())
+        cores = [lst.attrib['name'].strip() for lst in xml.findall('./lst/lst')]
+    except urllib2.HTTPError as e:
+        log_verbose('collectd-solr plugin get_cores: can\'t get info, HTTP error: ' + e.code)
+    except urllib2.URLError as e:
+        log_verbose('collectd-solr plugin get_cores: can\'t get info: ' + e.reason)
+
     return cores
 
 
