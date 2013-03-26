@@ -99,6 +99,7 @@ def fetch_info(core):
 def configure_callback(conf):
     """Receive configuration block"""
     global SOLR_HOST, SOLR_PORT, SOLR_URL, SOLR_ADMIN_URL
+    log_verbose("Configuring solr plugin with params: %s" % str(conf.children))
     for node in conf.children:
         if node.key == 'Host':
             SOLR_HOST = node.values[0]
